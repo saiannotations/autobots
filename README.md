@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # RoboFarm — a living robot farm
 
 A self-running 3D farm simulation built with **React**, **React Three Fiber**, **three.js** and **postprocessing**.
@@ -77,3 +78,6 @@ src/
 ```
 
 Add `?debug` to the URL to expose `window.__farm` (the simulation) in the console.
+=======
+# autobots
+>>>>>>> 5f6872b05c3bc1caf1d66da8f47cb17c18e91a15
