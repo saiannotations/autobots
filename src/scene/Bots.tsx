@@ -135,7 +135,7 @@ export function Bots() {
         v.bobber.position.set(bx, 0.2 + Math.sin(time * 3 + b.id) * 0.025 + nibble, bz); v.hole.position.set(bx, 0.2, bz);
         v.root.updateMatrixWorld(true); v.rodTip.getWorldPosition(tv.a);
         const a = v.line.geometry.attributes.position as THREE.BufferAttribute; a.setXYZ(0, tv.a.x, tv.a.y, tv.a.z); a.setXYZ(1, bx, v.bobber.position.y, bz); a.needsUpdate = true;
-      } else if (b.act === 'harvest' || b.act === 'plant') { const s = Math.sin(time * 10 + b.id); set(L, -1.3 + s * 0.35, -0.7 - s * 0.2); set(R, -1.3 - s * 0.35, -0.7 + s * 0.2); v.head.rotation.x = 0.3; }
+      } else if (b.act === 'harvest' || b.act === 'plant' || b.act === 'collect') { const s = Math.sin(time * 10 + b.id); set(L, -1.3 + s * 0.35, -0.7 - s * 0.2); set(R, -1.3 - s * 0.35, -0.7 + s * 0.2); v.head.rotation.x = 0.3; }
       else if (b.act === 'sell' || b.act === 'wholesale') { set(L, -1.25, -0.25); set(R, -1.25, -0.25); v.head.rotation.x = -0.05; }
       else if (b.moving) { const s = Math.sin(time * 9 + b.id) * 0.35; set(L, s, -0.25); set(R, -s, -0.25); v.head.rotation.x *= 0.9; v.head.rotation.y *= 0.9; }
       else { set(L, 0, -0.15); set(R, 0, -0.15); v.head.rotation.x *= 0.9; v.head.rotation.y = Math.sin(time * 0.7 + b.id) * 0.45; }

@@ -1,13 +1,13 @@
 import {
   ITEMS, CROPS, CROP_TYPES, FISH, ALL_ITEMS, SEASONS, SEASON_ORDER, DAY_SECONDS, MAX_BOTS, POND, STALL, DOCK, ROAD_Z,
-  BOT_COLORS, BOT_NAMES, SHOP_SPOTS, FISH_SPOTS, WISH_POOL,
-  type ItemKey, type CropKey, type SeasonKey,
+  BOT_COLORS, BOT_NAMES, SHOP_SPOTS, FISH_SPOTS, WISH_POOL, NESTS, LAY, OBSTACLES, isPoultry,
+  type ItemKey, type CropKey, type SeasonKey, type ProduceKey,
 } from './constants';
 
 /* ------------------------------------------------------------------ types */
 export type SlotState = 'empty' | 'growing' | 'ripe';
-export interface Slot { idx: number; type: CropKey; x: number; z: number; state: SlotState; t: number; reserved: number; rot: number }
-export type TaskType = 'harvest' | 'plant' | 'sell' | 'wholesale' | 'fish' | 'wait' | 'idle';
+export interface Slot { idx: number; type: ProduceKey; sx?: number; sz?: number; x: number; z: number; state: SlotState; t: number; reserved: number; rot: number }
+export type TaskType = 'collect' | 'harvest' | 'plant' | 'sell' | 'wholesale' | 'fish' | 'wait' | 'idle';
 export interface Task {
   type: TaskType; tx: number; tz: number; lx: number; lz: number; path: { x: number; z: number }[];
   phase: 'move' | 'act'; t: number; slot?: number; cust?: number; spot?: number; dur?: number; done?: boolean; started?: boolean;
@@ -104,7 +104,10 @@ export class Sim {
       const d = CROPS[t]; const dir = Math.sign(d.pz);
       for (let r = 0; r < this.rows[t]; r++) for (let c = 0; c < d.cols; c++) this.addSlot(t, c, r, dir);
     }
+    for (const n of NESTS) this.slots.push({ idx: this.slots.length, type: n.type, x: n.x, z: n.z, sx: n.sx, sz: n.sz, state: 'growing', t: Math.random() * 0.9, reserved: 0, rot: Math.random() * Math.PI * 2 });
   }
+  /** Seconds a slot takes to become ready. */
+  growTime(t: ProduceKey) { return isPoultry(t) ? LAY[t] : CROPS[t].grow; }
   slotPos(t: CropKey, c: number, r: number) {
     const d = CROPS[t]; const dir = Math.sign(d.pz);
     return { x: d.px + (c - (d.cols - 1) / 2) * d.sp, z: d.pz - dir * d.sp + dir * r * d.sp };
@@ -114,7 +117,7 @@ export class Sim {
     const s: Slot = { idx: this.slots.length, type: t, x: p.x, z: p.z, state: 'empty', t: 0, reserved: 0, rot: Math.random() * Math.PI * 2 };
     this.slots.push(s); return s;
   }
-  slotsOf(t: CropKey) { return this.slots.filter(s => s.type === t); }
+  slotsOf(t: ProduceKey) { return this.slots.filter(s => s.type === t); }
 
   freshWorld() {
     Object.assign(this, { clock: 0, cash: 40, lifetime: 0, bought: 0, fert: 0, ads: 0, expand: 0, tune: 0, botSeq: 0, custSeq: 0 });
@@ -122,7 +125,7 @@ export class Sim {
     this.rows = { tomato: 3, corn: 3, rice: 3, apple: 2 };
     this.bots = []; this.customers = []; this.fishReserved = FISH_SPOTS.map(() => 0); this.spotUsed = SHOP_SPOTS.map(() => 0);
     this.buildFields();
-    for (const s of this.slots) { const r = Math.random(); if (r < 0.3) { s.state = 'ripe'; s.t = 1; } else if (r < 0.85) { s.state = 'growing'; s.t = rand(0.1, 0.85); } }
+    for (const s of this.slots) { const r = Math.random(); if (r < 0.3) { s.state = 'ripe'; s.t = 1; } else if (r < 0.85 || isPoultry(s.type)) { s.state = 'growing'; s.t = rand(0.1, 0.85); } }
     for (let i = 0; i < 3; i++) this.addBot(0);
     for (let i = 0; i < 4; i++) this.spawnCustomer(true);
     this.lastDay = 1; this.rev++;
@@ -198,7 +201,7 @@ export class Sim {
   }
   private nearestSlot(b: Bot, state: SlotState) {
     let best: Slot | null = null, bd = 1e9;
-    for (const s of this.slots) { if (s.state !== state || s.reserved) continue; const d = Math.hypot(s.x - b.x, s.z - b.z) + Math.random() * 6; if (d < bd) { bd = d; best = s; } }
+    for (const s of this.slots) { if (s.state !== state || s.reserved) continue; const d = Math.hypot(s.x - b.x, s.z - b.z) + Math.random() * 6 - (isPoultry(s.type) ? 14 : 0); if (d < bd) { bd = d; best = s; } }
     return best;
   }
   private freeSpot(b: Bot) {
@@ -220,11 +223,15 @@ export class Sim {
     const a = Math.random() * Math.PI * 2;
     return this.setTask(b, { type: 'idle', tx: DOCK.x + Math.cos(a) * 1.6, tz: DOCK.z + Math.sin(a) * 1.6, lx: 0, lz: -6, dur: rand(1.2, 2.5) });
   }
-  private slotTask(b: Bot, s: Slot, type: 'harvest' | 'plant') { s.reserved = b.id; const st = this.standNear(b, s.x, s.z, s.type === 'apple' ? 1.7 : 1.05); return this.setTask(b, { type, slot: s.idx, tx: st.x, tz: st.z, lx: s.x, lz: s.z }); }
+  private slotTask(b: Bot, s: Slot, type: 'harvest' | 'plant') {
+    s.reserved = b.id;
+    if (s.sx != null) return this.setTask(b, { type: 'collect', slot: s.idx, tx: s.sx, tz: s.sz!, lx: s.x, lz: s.z });
+    const st = this.standNear(b, s.x, s.z, s.type === 'apple' ? 1.7 : 1.05); return this.setTask(b, { type, slot: s.idx, tx: st.x, tz: st.z, lx: s.x, lz: s.z });
+  }
   private sellTask(b: Bot, c: Customer) { c.reservedBy = b.id; const st = this.standNear(b, c.x, c.z, 1.2); return this.setTask(b, { type: 'sell', cust: c.id, tx: st.x, tz: st.z, lx: c.x, lz: c.z }); }
   private fishTask(b: Bot, i: number) { this.fishReserved[i] = b.id; const s = FISH_SPOTS[i]; return this.setTask(b, { type: 'fish', spot: i, tx: s.x, tz: s.z, lx: s.lx, lz: s.lz }); }
   private taskValid(b: Bot, t: Task) {
-    if (t.type === 'harvest') { const s = this.slots[t.slot!]; return !!s && s.state === 'ripe' && s.reserved === b.id && b.carry.length < botCap(b); }
+    if (t.type === 'harvest' || t.type === 'collect') { const s = this.slots[t.slot!]; return !!s && s.state === 'ripe' && s.reserved === b.id && b.carry.length < botCap(b); }
     if (t.type === 'plant') { const s = this.slots[t.slot!]; return !!s && s.state === 'empty' && s.reserved === b.id; }
     if (t.type === 'sell') { const c = this.custById(t.cust!); return !!c && c.state === 'wait' && c.reservedBy === b.id; }
     if (t.type === 'fish') return this.fishReserved[t.spot!] === b.id;
@@ -284,6 +291,10 @@ export class Sim {
       const dl = b.x - STALL.x0, dr = STALL.x1 - b.x, db = b.z - STALL.z0, df = STALL.z1 - b.z; const m = Math.min(dl, dr, db, df);
       if (m === dl) b.x = STALL.x0 + 0.4; else if (m === dr) b.x = STALL.x1 - 0.4; else if (m === db) b.z = STALL.z0 + 0.4; else b.z = STALL.z1 - 0.4;
     }
+    for (const o of OBSTACLES) if (b.x > o.x0 && b.x < o.x1 && b.z > o.z0 && b.z < o.z1) {
+      const dl = b.x - o.x0, dr = o.x1 - b.x, db = b.z - o.z0, df = o.z1 - b.z; const m = Math.min(dl, dr, db, df);
+      if (m === dl) b.x = o.x0; else if (m === dr) b.x = o.x1; else if (m === db) b.z = o.z0; else b.z = o.z1;
+    }
     if (inPond(b.x, b.z, 0.2)) { const a = pondAng(b.x, b.z); b.x = POND.cx + Math.cos(a) * (POND.rx + 0.25); b.z = POND.cz + Math.sin(a) * (POND.rz + 0.25); }
   }
   private updateBot(b: Bot, dt: number) {
@@ -296,6 +307,7 @@ export class Sim {
     else {
       t.t += dt; if (t.type !== 'fish') this.turnTo(b, t.lx, t.lz, dt, 8); acting = t.type;
       if (t.type === 'harvest' && t.t >= 0.9) { const s = this.slots[t.slot!]; s.state = 'empty'; s.t = 0; s.reserved = 0; b.carry.push(s.type); this.releaseTask(b); }
+      else if (t.type === 'collect' && t.t >= 1.3) { const s = this.slots[t.slot!]; s.state = 'growing'; s.t = 0; s.reserved = 0; b.carry.push(s.type); this.releaseTask(b); }
       else if (t.type === 'plant' && t.t >= 1.1) { const s = this.slots[t.slot!]; s.state = 'growing'; s.t = 0.02; s.reserved = 0; this.emit({ k: 'plant', x: s.x, z: s.z }); this.releaseTask(b); }
       else if (t.type === 'sell') { if (!t.done && t.t >= 0.45) { t.done = true; const c = this.custById(t.cust!); if (c) this.doSale(b, c); } if (t.t >= 0.9) this.releaseTask(b); }
       else if (t.type === 'wholesale') { if (!t.done && t.t >= 0.5) { t.done = true; this.wholesale(b); } if (t.t >= 0.9) this.releaseTask(b); }
@@ -413,7 +425,8 @@ export class Sim {
     this.mgrT -= dt; if (this.mgrT <= 0) { this.mgrT = 1.5; this.manager(); }
     this.spawnLogic(dt);
     const gm = (1 + 0.2 * this.fert) * SEASONS[this.season].grow;
-    for (const s of this.slots) if (s.state === 'growing') { s.t += (dt * gm) / CROPS[s.type].grow; if (s.t >= 1) { s.t = 1; s.state = 'ripe'; } }
+    const lay = (0.15 + 0.85 * this.daylight) * (this.season === 'winter' ? 0.6 : this.season === 'summer' ? 0.9 : 1);
+    for (const s of this.slots) if (s.state === 'growing') { s.t += (dt * (isPoultry(s.type) ? lay : gm)) / this.growTime(s.type); if (s.t >= 1) { s.t = 1; s.state = 'ripe'; } }
     for (const b of this.bots) this.updateBot(b, dt);
     this.separate();
     for (let i = this.customers.length - 1; i >= 0; i--) this.updateCustomer(this.customers[i], dt);
@@ -450,7 +463,7 @@ export class Sim {
         for (const b of this.bots) { const xpGain = chunk / 40; this.gainXp(b, xpGain); b.earned += gained / this.bots.length; }
       }
       // Fields and pond look lived-in after a long absence
-      for (const s of this.slots) { s.reserved = 0; const r = Math.random(); if (r < 0.35) { s.state = 'ripe'; s.t = 1; } else if (r < 0.9) { s.state = 'growing'; s.t = rand(0.15, 0.95); } else { s.state = 'empty'; s.t = 0; } }
+      for (const s of this.slots) { s.reserved = 0; const r = Math.random(); if (r < 0.35) { s.state = 'ripe'; s.t = 1; } else if (r < 0.9 || isPoultry(s.type)) { s.state = 'growing'; s.t = rand(0.15, 0.95); } else { s.state = 'empty'; s.t = 0; } }
       for (const b of this.bots) { b.task = null; b.fish = null; b.carry = b.carry.slice(0, botCap(b)); }
       this.fishReserved = FISH_SPOTS.map(() => 0);
       for (const c of this.customers.slice()) { if (c.spot >= 0) this.spotUsed[c.spot] = 0; }
@@ -469,7 +482,7 @@ export class Sim {
       v: 1, savedAt: Date.now(), clock: this.clock, speed: this.speed, seasonPref: this.seasonPref,
       cash: this.cash, lifetime: this.lifetime, bought: this.bought, fert: this.fert, ads: this.ads, expand: this.expand, tune: this.tune,
       today: this.today, soldToday: this.soldToday, history: this.history, best: this.best, rows: this.rows, botSeq: this.botSeq, custSeq: this.custSeq, lastDay: this.lastDay,
-      slots: this.slots.map(s => [s.state === 'empty' ? 0 : s.state === 'growing' ? 1 : 2, Math.round(s.t * 1000) / 1000, Math.round(s.rot * 100) / 100]),
+      slots2: this.slots.map(s => [`${s.type}:${s.x.toFixed(1)}:${s.z.toFixed(1)}`, s.state === 'empty' ? 0 : s.state === 'growing' ? 1 : 2, Math.round(s.t * 1000) / 1000, Math.round(s.rot * 100) / 100]),
       bots: this.bots.map(b => ({ id: b.id, name: b.name, color: b.color, level: b.level, xp: b.xp, earned: Math.round(b.earned), sold: b.sold, job: b.job, carry: b.carry, x: b.x, z: b.z, yaw: b.yaw, born: b.born })),
       customers: this.customers.filter(c => c.state !== 'leave').map(c => ({ id: c.id, x: c.x, z: c.z, yaw: c.yaw, wish: c.wish, wallet: c.wallet, startWallet: c.startWallet, spot: c.spot, state: c.state, path: c.path, patience: c.patience, speed: c.speed, outfit: c.outfit, seed: c.seed })),
     };
@@ -488,7 +501,11 @@ export class Sim {
       });
       this.today = d.today || { earned: 0, spent: 0, sold: 0, koi: 0 }; this.soldToday = d.soldToday || {};
       this.rows = d.rows || this.rows; this.buildFields();
-      (d.slots || []).forEach((v: number[], i: number) => { const s = this.slots[i]; if (!s) return; s.state = v[0] === 0 ? 'empty' : v[0] === 1 ? 'growing' : 'ripe'; s.t = v[1]; s.rot = v[2]; });
+      const st = (n: number): SlotState => (n === 0 ? 'empty' : n === 1 ? 'growing' : 'ripe');
+      if (d.slots2) {
+        const byKey = new Map(this.slots.map(s => [`${s.type}:${s.x.toFixed(1)}:${s.z.toFixed(1)}`, s]));
+        for (const v of d.slots2 as [string, number, number, number][]) { const s = byKey.get(v[0]); if (!s) continue; s.state = isPoultry(s.type) && v[1] === 0 ? 'growing' : st(v[1]); s.t = v[2]; s.rot = v[3]; }
+      } else (d.slots || []).forEach((v: number[], i: number) => { const s = this.slots[i]; if (!s || isPoultry(s.type)) return; s.state = st(v[0]); s.t = v[1]; s.rot = v[2]; });
       this.bots = (d.bots || []).map((b: any) => ({ ...b, task: null, waitTime: 0, fish: null, act: '', moving: false, dist: 0 }));
       this.spotUsed = SHOP_SPOTS.map(() => 0); this.fishReserved = FISH_SPOTS.map(() => 0);
       this.customers = (d.customers || []).map((c: any) => ({ ...c, y: 0, reservedBy: 0, grumpy: false, moving: false, walkT: 0, rev: 0 }));

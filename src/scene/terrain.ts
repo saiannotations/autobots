@@ -29,5 +29,7 @@ export function excluded(x: number, z: number) {
   for (const r of fieldRects) if (x > r[0] && x < r[1] && z > r[2] && z < r[3]) return true;
   if (x > -48 && x < -30 && z > -46 && z < -28) return true;
   if (Math.hypot(x - 41, z + 38) < 2.5) return true;
+  if (x > -49.5 && x < -33.5 && z > -7.5 && z < 10.5) return true;
+  if (Math.hypot(x - 14, z + 38) < 3.4) return true;
   return false;
 }

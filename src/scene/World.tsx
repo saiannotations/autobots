@@ -7,6 +7,7 @@ import { Atmosphere } from './Atmosphere';
 import { Landscape } from './Landscape';
 import { Buildings, Pond } from './Buildings';
 import { Crops } from './Crops';
+import { Poultry } from './Poultry';
 import { Bots } from './Bots';
 import { People } from './People';
 import { Weather } from './Weather';
@@ -56,6 +57,7 @@ export function World() {
       <Buildings />
       <Pond />
       <Crops />
+      <Poultry />
       <Bots />
       <People />
       <Weather />

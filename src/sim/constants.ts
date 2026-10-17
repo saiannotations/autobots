@@ -1,13 +1,15 @@
 export type CropKey = 'tomato' | 'corn' | 'rice' | 'apple';
 export type FishKey = 'catfish' | 'trout' | 'salmon' | 'koi';
-export type ItemKey = CropKey | FishKey;
+export type PoultryKey = 'eggs' | 'duckEggs';
+export type ProduceKey = CropKey | PoultryKey;
+export type ItemKey = CropKey | FishKey | PoultryKey;
 export type SeasonKey = 'spring' | 'summer' | 'rainy' | 'winter';
 
 export interface ItemDef {
   name: string;
   plural: string;
   price: number;
-  kind: 'crop' | 'fish';
+  kind: 'crop' | 'fish' | 'poultry';
   color?: number;
   odds?: number;
 }
@@ -21,6 +23,8 @@ export const ITEMS: Record<ItemKey, ItemDef> = {
   trout: { name: 'Trout', plural: 'trout', price: 8, kind: 'fish', color: 0x8aa6b5, odds: 0.33 },
   salmon: { name: 'Salmon', plural: 'salmon', price: 14, kind: 'fish', color: 0xd98764, odds: 0.21 },
   koi: { name: 'Golden Koi', plural: 'golden koi', price: 40, kind: 'fish', color: 0xe8a93a, odds: 0.06 },
+  eggs: { name: 'Egg Carton', plural: 'egg cartons', price: 6, kind: 'poultry', color: 0xf1e6d2 },
+  duckEggs: { name: 'Duck Eggs', plural: 'duck egg cartons', price: 9, kind: 'poultry', color: 0xcfe3dc },
 };
 
 export interface CropDef { grow: number; px: number; pz: number; cols: number; rows: number; sp: number; maxRows: number }
@@ -80,4 +84,22 @@ for (const deg of [15, 50, 130, 165, 200, 240, 300, 340]) {
 }
 FISH_SPOTS.push({ x: 0, z: -27.1, lx: 0, lz: -33, pier: true });
 
-export const WISH_POOL: [ItemKey, number][] = [['tomato', 3], ['corn', 3], ['rice', 2], ['apple', 3], ['catfish', 2], ['trout', 2], ['salmon', 1.4]];
+export const WISH_POOL: [ItemKey, number][] = [['tomato', 3], ['corn', 3], ['rice', 2], ['apple', 3], ['catfish', 2], ['trout', 2], ['salmon', 1.4], ['eggs', 2.6], ['duckEggs', 1.2]];
+
+/* ---------------- poultry ---------------- */
+/** Seconds for a nest to produce a full carton at 1× in daylight. */
+export const LAY: Record<PoultryKey, number> = { eggs: 16, duckEggs: 26 };
+/** Chicken coop: raised house on the east edge of a fenced run; nest boxes open to the outside. */
+export const COOP = { x: -37, z: 1.5, w: 4.2, d: 4.2 };
+export const RUN = { x0: -49, x1: -34.9, z0: -7, z1: 10 };
+export const DUCK_HOUSE = { x: 15.2, z: -37.6 };
+export interface NestDef { type: PoultryKey; x: number; z: number; sx: number; sz: number }
+export const NESTS: NestDef[] = [];
+for (let i = 0; i < 6; i++) { const z = COOP.z - 1.6 + i * 0.64; NESTS.push({ type: 'eggs', x: COOP.x + COOP.w / 2 + 0.45, z, sx: COOP.x + COOP.w / 2 + 1.55, sz: z }); }
+for (const [dx, dz] of [[-2.0, -0.4], [-2.3, 0.9], [-1.4, 1.8]]) { const x = DUCK_HOUSE.x + dx, z = DUCK_HOUSE.z + dz; NESTS.push({ type: 'duckEggs', x, z, sx: x - 1.0, sz: z + 0.9 }); }
+/** Rectangles robots must not drive through (coop + run, duck house). */
+export const OBSTACLES = [
+  { x0: RUN.x0, x1: RUN.x1, z0: RUN.z0, z1: RUN.z1 },
+  { x0: DUCK_HOUSE.x - 1.3, x1: DUCK_HOUSE.x + 1.3, z0: DUCK_HOUSE.z - 1.1, z1: DUCK_HOUSE.z + 1.1 },
+];
+export const isPoultry = (t: string): t is PoultryKey => t === 'eggs' || t === 'duckEggs';

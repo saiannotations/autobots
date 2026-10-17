@@ -48,6 +48,14 @@ The save lives in this browser only (localStorage). A different browser or compu
 
 Fireflies appear on spring, summer and (fewer) rainy nights. Winter nights have none, as in real life.
 
+### Poultry
+
+West of the plaza is a raised red hen house with a tin roof, a ramp and a row of nest boxes, inside a chicken-wire run with a feeder and waterer. A rooster and ten hens of mixed breeds wander, peck and scratch; they shelter under the coop when it rains and walk up the ramp to roost at dusk (the coop window glows at night).
+
+By the pond, a duck house has straw nests. Mallards, brown hens and white Pekins swim, dabble tail-up and leave ripples; a mother leads a line of ducklings. They sleep by their house at night and stand on the ice in winter.
+
+Hens lay into the nest boxes and ducks into their nests. Laying is fastest in daylight and slows in winter. Bots collect the eggs and sell egg cartons ($6) and duck eggs ($9) to customers, who now ask for them too.
+
 ## Controls
 
 | | |

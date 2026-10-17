@@ -23,6 +23,14 @@ export function drawIcon(ctx: CanvasRenderingContext2D, type: ItemKey, x: number
     ctx.fillStyle = '#d9c393'; ctx.beginPath(); ctx.moveTo(-r * 0.55, -r * 0.5); ctx.quadraticCurveTo(-r * 0.95, r * 0.2, -r * 0.7, r * 0.85); ctx.lineTo(r * 0.7, r * 0.85); ctx.quadraticCurveTo(r * 0.95, r * 0.2, r * 0.55, -r * 0.5); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(-r * 0.3, -r * 0.55); ctx.lineTo(-r * 0.5, -r * 0.95); ctx.lineTo(0, -r * 0.75); ctx.lineTo(r * 0.5, -r * 0.95); ctx.lineTo(r * 0.3, -r * 0.55); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#8a5a2c'; ctx.fillRect(-r * 0.5, -r * 0.62, r, r * 0.16);
+  } else if (type === 'eggs' || type === 'duckEggs') {
+    // open carton with eggs
+    ctx.fillStyle = '#b89a6c'; ctx.beginPath(); ctx.moveTo(-r * 0.95, r * 0.05); ctx.lineTo(r * 0.95, r * 0.05); ctx.lineTo(r * 0.82, r * 0.7); ctx.lineTo(-r * 0.82, r * 0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = type === 'eggs' ? '#f3e7d3' : '#cfe6de';
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(-r * 0.55 + i * r * 0.55, -r * 0.08, r * 0.24, r * 0.32, 0, 0, Math.PI * 2); ctx.fill(); }
+    if (type === 'eggs') { ctx.fillStyle = '#d9a774'; ctx.beginPath(); ctx.ellipse(0, -r * 0.08, r * 0.24, r * 0.32, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(-r * 0.62 + i * r * 0.55, -r * 0.2, r * 0.07, r * 0.11, -0.4, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#9c7f55'; ctx.fillRect(-r * 0.95, r * 0.05, r * 1.9, r * 0.12);
   } else {
     ctx.rotate(-0.25); ctx.fillStyle = hex(it.color!);
     ctx.beginPath(); ctx.moveTo(r * 0.55, 0); ctx.lineTo(r * 0.98, -r * 0.45); ctx.lineTo(r * 0.98, r * 0.45); ctx.closePath(); ctx.fill();

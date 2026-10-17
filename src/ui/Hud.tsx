@@ -11,7 +11,7 @@ function dur(s: number) {
   if (h >= 24) { const d = Math.floor(h / 24); return `${d} day${d > 1 ? 's' : ''} ${h % 24} h`; }
   return h ? `${h} h ${m} min` : `${Math.max(1, m)} min`;
 }
-const STATE: Record<string, string> = { harvest: 'harvesting', plant: 'planting', sell: 'selling to a shopper', wholesale: 'selling to the stall', fish: 'heading to the pond', wait: 'waiting for a buyer', idle: 'charging at the dock' };
+const STATE: Record<string, string> = { collect: 'collecting eggs', harvest: 'harvesting', plant: 'planting', sell: 'selling to a shopper', wholesale: 'selling to the stall', fish: 'heading to the pond', wait: 'waiting for a buyer', idle: 'charging at the dock' };
 
 function Seg<T extends string | number>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
